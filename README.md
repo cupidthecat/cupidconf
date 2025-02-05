@@ -16,7 +16,7 @@ cupidconf is a lightweight configuration parser library written in C. It is desi
 - [Installation](#installation)
 - [Quick Start Guide](#quick-start-guide)
 - [Usage Examples](#usage-examples)
-- [API Reference](#api-reference)
+- [Function Reference](#Function-reference)
   - [`cupidconf_load`](#cupidconf_load)
   - [`cupidconf_get`](#cupidconf_get)
   - [`cupidconf_get_list`](#cupidconf_get_list)
@@ -177,7 +177,7 @@ int main(void) {
 
 ---
 
-## API Reference
+## Function Reference
 
 ### `cupidconf_load`
 
