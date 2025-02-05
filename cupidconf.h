@@ -30,10 +30,10 @@ cupidconf_t *cupidconf_load(const char *filename);
 
 /**
  * Returns the value for the given key.
- * If the key appears more than once, this returns the first occurrence.
+ * If the key contains a wildcard ('*'), it returns the first value that matches the pattern.
  *
  * @param conf  The config object returned by cupidconf_load().
- * @param key   The key to look for.
+ * @param key   The key to look for (may contain wildcards).
  *
  * @return      The corresponding value string (read-only), or NULL if not found.
  */
@@ -41,9 +41,10 @@ const char *cupidconf_get(cupidconf_t *conf, const char *key);
 
 /**
  * Returns all values for the given key.
+ * If the key contains a wildcard ('*'), it returns all values that match the pattern.
  *
  * @param conf   The config object.
- * @param key    The key to search.
+ * @param key    The key to search (may contain wildcards).
  * @param count  Pointer to an int that will receive the number of values found.
  *
  * @return       An array of char pointers (read-only) that the caller must free,

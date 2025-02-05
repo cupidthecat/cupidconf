@@ -1,10 +1,17 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "cupidconf.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <fnmatch.h>
+
+/* Helper: Check if a key matches a wildcard pattern. */
+static int match_wildcard(const char *pattern, const char *key) {
+    return fnmatch(pattern, key, 0) == 0;
+}
 
 /* Helper: Trim leading and trailing whitespace in place. */
 static char *trim_whitespace(char *str) {
@@ -101,8 +108,9 @@ cupidconf_t *cupidconf_load(const char *filename) {
 const char *cupidconf_get(cupidconf_t *conf, const char *key) {
     if (!conf || !key)
         return NULL;
+
     for (cupidconf_entry *entry = conf->entries; entry != NULL; entry = entry->next) {
-        if (strcmp(entry->key, key) == 0)
+        if (match_wildcard(key, entry->key))
             return entry->value;
     }
     return NULL;
@@ -111,25 +119,30 @@ const char *cupidconf_get(cupidconf_t *conf, const char *key) {
 char **cupidconf_get_list(cupidconf_t *conf, const char *key, int *count) {
     if (!conf || !key || !count)
         return NULL;
+
     int cnt = 0;
     for (cupidconf_entry *entry = conf->entries; entry != NULL; entry = entry->next) {
-        if (strcmp(entry->key, key) == 0)
+        if (match_wildcard(key, entry->key))
             cnt++;
     }
+
     if (cnt == 0) {
         *count = 0;
         return NULL;
     }
+
     char **values = malloc(sizeof(char *) * cnt);
     if (!values) {
         *count = 0;
         return NULL;
     }
+
     int idx = 0;
     for (cupidconf_entry *entry = conf->entries; entry != NULL; entry = entry->next) {
-        if (strcmp(entry->key, key) == 0)
+        if (match_wildcard(key, entry->key))
             values[idx++] = entry->value;
     }
+
     *count = cnt;
     return values;
 }
