@@ -1,4 +1,4 @@
-# cupidconf Library Documentation
+# cupidconf lib
 
 **Version:** 0.0.1
 
