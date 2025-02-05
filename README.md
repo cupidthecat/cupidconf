@@ -1,6 +1,6 @@
 # cupidconf Library Documentation
 
-**Version:** 1.0.0
+**Version:** 0.0.1
 
 **Overview:**  
 cupidconf is a lightweight configuration parser library written in C. It is designed to load simple configuration files formatted as key-value pairs (using the `key = value` syntax) and supports multiple entries for a single key. The library automatically trims whitespace and ignores comments (lines starting with `#` or `;`), making it easy for both beginners and advanced developers to integrate configuration parsing into their applications.
@@ -325,8 +325,3 @@ Contributions to CupidConf are welcome! If you wish to contribute:
    - Use the repository’s issue tracker to report bugs or request features.
 
 ---
-
-## License and Support
-
-**License:**  
-cupidconf is released under the MIT License. See the [LICENSE](LICENSE) file for details.
