@@ -1,9 +1,12 @@
 # cupidconf lib
 
-**Version:** 0.0.1
+**Version:** 0.0.2
 
 **Overview:**  
 cupidconf is a lightweight configuration parser library written in C. It is designed to load simple configuration files formatted as key-value pairs (using the `key = value` syntax) and supports multiple entries for a single key. The library automatically trims whitespace and ignores comments (lines starting with `#` or `;`), making it easy for both beginners and advanced developers to integrate configuration parsing into their applications.
+
+**New in Version 0.0.2:**  
+- Added support for **wildcard patterns** in keys (e.g., `ignore = /path/to/files/*.txt`).
 
 **Intended Audience:**  
 - C developers needing a simple yet effective configuration parser.
@@ -170,10 +173,50 @@ int main(void) {
 }
 ```
 
+### Example 3: Using Wildcard Patterns in Keys
+
+You can now use wildcard patterns in keys to match multiple values. For example, consider the following configuration file:
+
+```
+ignore = /home/user/project/*.txt
+ignore = /home/user/project/temp/*
+verbose = true
+```
+
+The following code demonstrates how to retrieve values using wildcard patterns:
+
+```c
+#include "cupidconf.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void) {
+    cupidconf_t *conf = cupidconf_load("config.conf");
+    if (!conf) {
+        fprintf(stderr, "Failed to load configuration.\n");
+        return 1;
+    }
+
+    int count = 0;
+    char **ignores = cupidconf_get_list(conf, "ignore", &count);
+    if (ignores) {
+        printf("Found %d ignore pattern(s):\n", count);
+        for (int i = 0; i < count; i++) {
+            printf("  %s\n", ignores[i]);
+        }
+        free(ignores);
+    } else {
+        printf("No ignore patterns found.\n");
+    }
+
+    cupidconf_free(conf);
+    return 0;
+}
+```
+
 **Explanation:**
-- `cupidconf_get_list` returns an array of pointers to values for the given key.
-- The count of values is stored in the provided integer pointer.
-- **Important:** Only free the array returned by `cupidconf_get_list`. The actual strings are owned by the configuration object and will be freed by `cupidconf_free`.
+- The `ignore` key uses wildcard patterns (`*.txt` and `temp/*`) to match multiple files or directories.
+- The `cupidconf_get_list` function retrieves all values for the `ignore` key, including wildcard patterns.
 
 ---
 
@@ -268,8 +311,9 @@ While CupidConf itself does not expose runtime configuration options via environ
   - Leading and trailing whitespace around both the key and value is automatically trimmed.
   - Empty lines and lines beginning with `#` or `;` are ignored, allowing you to include comments.
 
-- **Customization:**  
-  - You can extend the parsing logic (e.g., to support sections or different delimiters) by modifying the source code in `cupidconf.c`.
+- **Wildcard Support:**  
+  - Keys can now include wildcard patterns (e.g., `ignore = /path/to/files/*.txt`).
+  - Use `cupidconf_get_list` to retrieve all values matching a wildcard pattern.
 
 ---
 
@@ -283,17 +327,9 @@ While CupidConf itself does not expose runtime configuration options via environ
 - **Custom Parsing Logic:**  
   For applications with more complex configuration formats (such as nested configurations or value type conversions), you can extend the parser functions or write additional helper functions that post-process the raw string values.
 
-- **Integration with Other Tools:**  
-  - **Logging:** Integrate with a logging library to report parsing errors or warnings.
-  - **Validation:** Add a validation layer to check that required keys are present and that values conform to expected formats.
-
-### Best Practices
-
-- **Memory Management:**  
-  Always call `cupidconf_free` after you are done with the configuration to avoid memory leaks.
-  
-- **Error Handling:**  
-  Check for `NULL` returns from API functions and handle errors appropriately, especially when dealing with file I/O and dynamic memory allocation.
+- **Wildcard Matching:**  
+  - The library now supports wildcard patterns in keys using the `fnmatch` function.
+  - This is particularly useful for filtering or ignoring files/directories in applications like `cupid-clip`.
 
 ---
 
@@ -307,21 +343,5 @@ While CupidConf itself does not expose runtime configuration options via environ
 
 **Q:** *How do I free the memory allocated by `cupidconf_get_list`?*  
 **A:** You only need to free the array pointer returned by `cupidconf_get_list`. Do not attempt to free the individual strings, as they are managed by the configuration object.
-
----
-
-## Contribution Guidelines
-
-Contributions to CupidConf are welcome! If you wish to contribute:
-
-1. **Fork the repository** and create a new branch for your feature or bug fix.
-2. **Follow the existing code style:**  
-   - Use clear, consistent indentation.
-   - Include comments where necessary.
-3. **Submit a pull request:**  
-   - Describe the changes and the problem they address.
-   - Ensure that your changes include tests or usage examples if applicable.
-4. **Report issues:**  
-   - Use the repository’s issue tracker to report bugs or request features.
 
 ---
