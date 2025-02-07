@@ -1,6 +1,8 @@
 #ifndef CUPIDCONF_H
 #define CUPIDCONF_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -56,6 +58,27 @@ char **cupidconf_get_list(cupidconf_t *conf, const char *key, int *count);
  * Frees the configuration object and all associated memory.
  */
 void cupidconf_free(cupidconf_t *conf);
+
+/**
+ * Checks if a given string matches any of the wildcard patterns stored
+ * as values under a specific key.
+ *
+ * For example, if the config contains:
+ *   ignore = *.txt
+ *   ignore = build_*
+ *
+ * Then calling:
+ *   cupidconf_value_in_list(conf, "ignore", "among.txt")
+ * would return true.
+ *
+ * @param conf   The configuration object.
+ * @param key    The key whose wildcard patterns you want to check.
+ * @param value  The string to test against the wildcard patterns.
+ *
+ * @return       true if the string matches at least one pattern,
+ *               false otherwise.
+ */
+bool cupidconf_value_in_list(cupidconf_t *conf, const char *key, const char *value);
 
 #ifdef __cplusplus
 }

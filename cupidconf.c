@@ -7,6 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <fnmatch.h>
+#include <stdbool.h>
 
 /* Helper: Check if a key matches a wildcard pattern. */
 static int match_wildcard(const char *pattern, const char *key) {
@@ -145,6 +146,29 @@ char **cupidconf_get_list(cupidconf_t *conf, const char *key, int *count) {
 
     *count = cnt;
     return values;
+}
+
+bool cupidconf_value_in_list(cupidconf_t *conf, const char *key, const char *value) {
+    if (!conf || !key || !value)
+        return false;
+
+    // Iterate over all entries in the config
+    for (cupidconf_entry *entry = conf->entries; entry != NULL; entry = entry->next) {
+        // If the entry's key exactly matches the requested key
+        if (strcmp(entry->key, key) == 0) {
+            // Now check if the 'value' you passed in matches
+            // this entry's pattern (stored as entry->value).
+            //
+            // Example: entry->value == "*.txt"
+            //          value        == "among.txt"
+            if (fnmatch(entry->value, value, 0) == 0) {
+                return true;  // We found a match, return immediately
+            }
+        }
+    }
+
+    // No match found
+    return false;
 }
 
 void cupidconf_free(cupidconf_t *conf) {
