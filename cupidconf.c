@@ -94,6 +94,17 @@ cupidconf_t *cupidconf_load(const char *filename) {
         char *key = trim_whitespace(trimmed);
         char *value = trim_whitespace(equal_sign + 1);
 
+        /* Handle inline comments (starting with # or ;) */
+        char *comment_start = value;
+        while (*comment_start) {
+            if (*comment_start == '#' || *comment_start == ';') {
+                *comment_start = '\0';  // Terminate the value at the comment start
+                value = trim_whitespace(value);  // Re-trim in case there was space before comment
+                break;
+            }
+            comment_start++;
+        }
+
         if (add_entry(conf, key, value) != 0) {
             // On allocation failure, free everything and return NULL.
             cupidconf_free(conf);
