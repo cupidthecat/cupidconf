@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <fnmatch.h>
 #include <stdbool.h>
+#include <wordexp.h>
 
 /* Helper: Check if a key matches a wildcard pattern. */
 static int match_wildcard(const char *pattern, const char *key) {
@@ -93,10 +94,26 @@ static int add_entry(cupidconf_t *conf, const char *key, const char *value) {
 }
 
 cupidconf_t *cupidconf_load(const char *filename) {
-    FILE *fp = fopen(filename, "r");
+    /* Expand ~ in filename using wordexp() */
+    wordexp_t p;
+    const char *expanded_filename = filename;
+    int ret = wordexp(filename, &p, 0);
+    if (ret == 0 && p.we_wordc > 0) {
+        /* Use the first expanded word (should be only one for a filename) */
+        expanded_filename = p.we_wordv[0];
+    }
+
+    FILE *fp = fopen(expanded_filename, "r");
     if (!fp) {
+        if (ret == 0) {
+            wordfree(&p);
+        }
         perror("cupidconf_load: fopen");
         return NULL;
+    }
+
+    if (ret == 0) {
+        wordfree(&p);
     }
 
     cupidconf_t *conf = malloc(sizeof(cupidconf_t));
