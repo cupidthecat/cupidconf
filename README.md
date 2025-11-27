@@ -6,14 +6,15 @@
 cupidconf is a lightweight configuration parser library written in C. It is designed to load simple configuration files formatted as key-value pairs (using the `key = value` syntax) and supports multiple entries for a single key. The library automatically trims whitespace and ignores comments (lines starting with `#` or `;`), making it easy for both beginners and advanced developers to integrate configuration parsing into their applications.
 
 **New in Version 0.0.4:**  
-- **Home directory expansion (`~`)** support added. Configuration values starting with `~` or `~/` are automatically expanded to the user's home directory path.
-  - For example, if your config has:
+- **Home directory expansion (`~`)** support added. Both the filename path passed to `cupidconf_load()` and configuration values starting with `~` or `~/` are automatically expanded to the user's home directory path.
+  - Filename expansion: You can use `~` in the filename path, e.g., `cupidconf_load("~/config.conf")` will expand to `/home/username/config.conf`.
+  - Value expansion: Configuration values are also expanded, for example:
     ```
     config_dir = ~/.config/myapp
     cache_dir = ~/cache
     ```
     these will be automatically expanded to `/home/username/.config/myapp` and `/home/username/cache` (or the appropriate home directory path for your system).
-  - The expansion uses the `HOME` environment variable. If `HOME` is not set, the value remains unchanged.
+  - The expansion uses `wordexp()` for filenames and the `HOME` environment variable for values. If `HOME` is not set, values remain unchanged.
 
 **New in Version 0.0.3:**  
 - **`cupidconf_value_in_list`** function added to allow **wildcard matching in config values**.  
@@ -277,10 +278,10 @@ int main(void) {
 
 ### Example 5: Using Home Directory Expansion (`~`)
 
-You can use `~` in configuration values to reference the user's home directory. The library automatically expands `~` and `~/` to the full home directory path:
+You can use `~` in both the filename path and configuration values to reference the user's home directory. The library automatically expands `~` and `~/` to the full home directory path:
 
 ```
-# Configuration file (config.conf)
+# Configuration file (~/config.conf)
 config_dir = ~/.config/myapp
 cache_dir = ~/cache
 log_file = ~/logs/app.log
@@ -293,7 +294,8 @@ The following code demonstrates how the tilde expansion works:
 #include <stdio.h>
 
 int main(void) {
-    cupidconf_t *conf = cupidconf_load("config.conf");
+    // The filename itself can use ~ expansion
+    cupidconf_t *conf = cupidconf_load("~/config.conf");
     if (!conf) {
         fprintf(stderr, "Failed to load configuration.\n");
         return 1;
@@ -322,9 +324,10 @@ int main(void) {
 ```
 
 **Explanation:**
+- The filename path passed to `cupidconf_load()` can contain `~`, which will be expanded using `wordexp()`.
 - Values starting with `~` or `~/` are automatically expanded to the user's home directory.
-- The expansion uses the `HOME` environment variable.
-- If `HOME` is not set, the value remains unchanged (e.g., `~` stays as `~`).
+- The expansion uses `wordexp()` for filenames and the `HOME` environment variable for values.
+- If `HOME` is not set, values remain unchanged (e.g., `~` stays as `~`).
 
 ---
 
@@ -337,10 +340,10 @@ cupidconf_t *cupidconf_load(const char *filename);
 ```
 
 - **Description:**  
-  Loads a configuration file specified by `filename`. The file must contain lines in the format `key = value`, and lines starting with `#` or `;` are treated as comments. Values starting with `~` or `~/` are automatically expanded to the user's home directory path.
+  Loads a configuration file specified by `filename`. The file must contain lines in the format `key = value`, and lines starting with `#` or `;` are treated as comments. Both the filename path and configuration values starting with `~` or `~/` are automatically expanded to the user's home directory path using `wordexp()` and the `HOME` environment variable.
   
 - **Parameters:**  
-  - `filename` (`const char *`): The path to the configuration file.
+  - `filename` (`const char *`): The path to the configuration file. The filename itself can contain `~` which will be expanded (e.g., `~/config.conf`).
   
 - **Return Value:**  
   - Returns a pointer to a `cupidconf_t` object on success.
@@ -446,8 +449,9 @@ While CupidConf itself does not expose runtime configuration options via environ
   - Empty lines and lines beginning with `#` or `;` are ignored, allowing you to include comments.
 
 - **Home Directory Expansion:**  
-  - Values starting with `~` or `~/` are automatically expanded to the user's home directory path.
-  - The expansion uses the `HOME` environment variable. If `HOME` is not set, the value remains unchanged.
+  - Both filename paths and values starting with `~` or `~/` are automatically expanded to the user's home directory path.
+  - Filename expansion uses `wordexp()` (e.g., `cupidconf_load("~/config.conf")`).
+  - Value expansion uses the `HOME` environment variable. If `HOME` is not set, the value remains unchanged.
   - Examples: `~/.config` expands to `/home/username/.config`, `~/cache` expands to `/home/username/cache`.
 
 - **Wildcard Support:**  
