@@ -1,9 +1,19 @@
 # cupidconf lib
 
-**Version:** 0.0.3  
+**Version:** 0.0.4  
 
 **Overview:**  
 cupidconf is a lightweight configuration parser library written in C. It is designed to load simple configuration files formatted as key-value pairs (using the `key = value` syntax) and supports multiple entries for a single key. The library automatically trims whitespace and ignores comments (lines starting with `#` or `;`), making it easy for both beginners and advanced developers to integrate configuration parsing into their applications.
+
+**New in Version 0.0.4:**  
+- **Home directory expansion (`~`)** support added. Configuration values starting with `~` or `~/` are automatically expanded to the user's home directory path.
+  - For example, if your config has:
+    ```
+    config_dir = ~/.config/myapp
+    cache_dir = ~/cache
+    ```
+    these will be automatically expanded to `/home/username/.config/myapp` and `/home/username/cache` (or the appropriate home directory path for your system).
+  - The expansion uses the `HOME` environment variable. If `HOME` is not set, the value remains unchanged.
 
 **New in Version 0.0.3:**  
 - **`cupidconf_value_in_list`** function added to allow **wildcard matching in config values**.  
@@ -15,7 +25,7 @@ cupidconf is a lightweight configuration parser library written in C. It is desi
     you can call `cupidconf_value_in_list(conf, "ignore", "among.txt")` to check if `"among.txt"` matches any of those patterns.
 - **Clarification on Wildcard Functions:**
   - **`cupidconf_get` / `cupidconf_get_list`**: These interpret **wildcards in the key**. For instance, if your config has keys like `foo.* = ...`, you can retrieve matches by using `cupidconf_get(conf, "foo.bar")`.
-  - **`cupidconf_value_in_list`**: This checks if a **given string** matches **wildcard patterns stored in the config values**. Useful for “ignore” or “exclusion” lists.
+  - **`cupidconf_value_in_list`**: This checks if a **given string** matches **wildcard patterns stored in the config values**. Useful for "ignore" or "exclusion" lists.
 
 **Intended Audience:**  
 - C developers needing a simple yet effective configuration parser.
@@ -265,6 +275,57 @@ int main(void) {
 }
 ```
 
+### Example 5: Using Home Directory Expansion (`~`)
+
+You can use `~` in configuration values to reference the user's home directory. The library automatically expands `~` and `~/` to the full home directory path:
+
+```
+# Configuration file (config.conf)
+config_dir = ~/.config/myapp
+cache_dir = ~/cache
+log_file = ~/logs/app.log
+```
+
+The following code demonstrates how the tilde expansion works:
+
+```c
+#include "cupidconf.h"
+#include <stdio.h>
+
+int main(void) {
+    cupidconf_t *conf = cupidconf_load("config.conf");
+    if (!conf) {
+        fprintf(stderr, "Failed to load configuration.\n");
+        return 1;
+    }
+
+    const char *config_dir = cupidconf_get(conf, "config_dir");
+    const char *cache_dir = cupidconf_get(conf, "cache_dir");
+    const char *log_file = cupidconf_get(conf, "log_file");
+
+    if (config_dir) {
+        printf("Config directory: %s\n", config_dir);
+        // Output: Config directory: /home/username/.config/myapp
+    }
+    if (cache_dir) {
+        printf("Cache directory: %s\n", cache_dir);
+        // Output: Cache directory: /home/username/cache
+    }
+    if (log_file) {
+        printf("Log file: %s\n", log_file);
+        // Output: Log file: /home/username/logs/app.log
+    }
+
+    cupidconf_free(conf);
+    return 0;
+}
+```
+
+**Explanation:**
+- Values starting with `~` or `~/` are automatically expanded to the user's home directory.
+- The expansion uses the `HOME` environment variable.
+- If `HOME` is not set, the value remains unchanged (e.g., `~` stays as `~`).
+
 ---
 
 ## Function Reference
@@ -276,7 +337,7 @@ cupidconf_t *cupidconf_load(const char *filename);
 ```
 
 - **Description:**  
-  Loads a configuration file specified by `filename`. The file must contain lines in the format `key = value`, and lines starting with `#` or `;` are treated as comments.
+  Loads a configuration file specified by `filename`. The file must contain lines in the format `key = value`, and lines starting with `#` or `;` are treated as comments. Values starting with `~` or `~/` are automatically expanded to the user's home directory path.
   
 - **Parameters:**  
   - `filename` (`const char *`): The path to the configuration file.
@@ -383,6 +444,11 @@ While CupidConf itself does not expose runtime configuration options via environ
     ```
   - Leading and trailing whitespace around both the key and value is automatically trimmed.
   - Empty lines and lines beginning with `#` or `;` are ignored, allowing you to include comments.
+
+- **Home Directory Expansion:**  
+  - Values starting with `~` or `~/` are automatically expanded to the user's home directory path.
+  - The expansion uses the `HOME` environment variable. If `HOME` is not set, the value remains unchanged.
+  - Examples: `~/.config` expands to `/home/username/.config`, `~/cache` expands to `/home/username/cache`.
 
 - **Wildcard Support:**  
   - **Key-based Wildcards:** `cupidconf_get` and `cupidconf_get_list` interpret wildcards in the **config key**.  

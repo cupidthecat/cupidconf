@@ -34,6 +34,42 @@ static char *trim_whitespace(char *str) {
     return str;
 }
 
+/* Helper: Expand ~ to home directory. Returns a newly allocated string that must be freed. */
+static char *expand_tilde(const char *path) {
+    if (!path || path[0] != '~')
+        return strdup(path);
+
+    /* Check if it's ~/ or just ~ */
+    if (path[1] == '/' || path[1] == '\0') {
+        const char *home = getenv("HOME");
+        if (!home) {
+            /* If HOME is not set, return the original path */
+            return strdup(path);
+        }
+
+        size_t home_len = strlen(home);
+        size_t path_len = strlen(path);
+        size_t new_len = home_len + path_len; /* path_len includes the ~, so this is correct */
+
+        char *expanded = malloc(new_len + 1);
+        if (!expanded)
+            return NULL;
+
+        if (path[1] == '/') {
+            /* ~/path -> /home/user/path */
+            snprintf(expanded, new_len + 1, "%s%s", home, path + 1);
+        } else {
+            /* ~ -> /home/user */
+            strcpy(expanded, home);
+        }
+
+        return expanded;
+    }
+
+    /* ~username not supported, return as-is */
+    return strdup(path);
+}
+
 /* Create a new entry and add it to the linked list. */
 static int add_entry(cupidconf_t *conf, const char *key, const char *value) {
     cupidconf_entry *entry = malloc(sizeof(cupidconf_entry));
@@ -105,12 +141,24 @@ cupidconf_t *cupidconf_load(const char *filename) {
             comment_start++;
         }
 
-        if (add_entry(conf, key, value) != 0) {
+        /* Expand ~ to home directory */
+        char *expanded_value = expand_tilde(value);
+        if (!expanded_value) {
             // On allocation failure, free everything and return NULL.
             cupidconf_free(conf);
             fclose(fp);
             return NULL;
         }
+
+        if (add_entry(conf, key, expanded_value) != 0) {
+            // On allocation failure, free everything and return NULL.
+            free(expanded_value);
+            cupidconf_free(conf);
+            fclose(fp);
+            return NULL;
+        }
+
+        free(expanded_value);
     }
 
     fclose(fp);
