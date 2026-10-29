@@ -8,7 +8,9 @@
 #include <ctype.h>
 #include <fnmatch.h>
 #include <stdbool.h>
-#include <wordexp.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdint.h>
 
 /* Helper: Check if a key matches a wildcard pattern. */
 static int match_wildcard(const char *pattern, const char *key) {
@@ -37,7 +39,7 @@ static char *trim_whitespace(char *str) {
 
 /* Helper: Expand ~ to home directory. Returns a newly allocated string that must be freed. */
 static char *expand_tilde(const char *path) {
-    if (!path || path[0] != '~')
+    if (path[0] != '~')
         return strdup(path);
 
     /* Check if it's ~/ or just ~ */
@@ -50,7 +52,8 @@ static char *expand_tilde(const char *path) {
 
         size_t home_len = strlen(home);
         size_t path_len = strlen(path);
-        size_t new_len = home_len + path_len; /* path_len includes the ~, so this is correct */
+        if (home_len > SIZE_MAX - path_len) { errno = ENOMEM; return NULL; }
+        size_t new_len = home_len + path_len;
 
         char *expanded = malloc(new_len + 1);
         if (!expanded)
@@ -72,7 +75,7 @@ static char *expand_tilde(const char *path) {
 }
 
 /* Create a new entry and add it to the linked list. */
-static int add_entry(cupidconf_t *conf, const char *key, const char *value) {
+static int add_entry(cupidconf_entry ***tail, const char *key, const char *value) {
     cupidconf_entry *entry = malloc(sizeof(cupidconf_entry));
     if (!entry) return -1;
 
@@ -87,34 +90,19 @@ static int add_entry(cupidconf_t *conf, const char *key, const char *value) {
         return -1;
     }
 
-    // Add to the front of the list for simplicity.
-    entry->next = conf->entries;
-    conf->entries = entry;
+    **tail = entry;
+    *tail = &entry->next;
     return 0;
 }
 
 cupidconf_t *cupidconf_load(const char *filename) {
-    /* Expand ~ in filename using wordexp() */
-    wordexp_t p;
-    const char *expanded_filename = filename;
-    int ret = wordexp(filename, &p, 0);
-    if (ret == 0 && p.we_wordc > 0) {
-        /* Use the first expanded word (should be only one for a filename) */
-        expanded_filename = p.we_wordv[0];
-    }
-
+    if (!filename) { errno = EINVAL; return NULL; }
+    char *expanded_filename = expand_tilde(filename);
+    if (!expanded_filename) return NULL;
     FILE *fp = fopen(expanded_filename, "r");
-    if (!fp) {
-        if (ret == 0) {
-            wordfree(&p);
-        }
-        perror("cupidconf_load: fopen");
-        return NULL;
-    }
-
-    if (ret == 0) {
-        wordfree(&p);
-    }
+    int saved = errno;
+    free(expanded_filename);
+    if (!fp) { errno = saved; return NULL; }
 
     cupidconf_t *conf = malloc(sizeof(cupidconf_t));
     if (!conf) {
@@ -123,10 +111,18 @@ cupidconf_t *cupidconf_load(const char *filename) {
     }
     conf->entries = NULL;
 
-    char line[1024];
-    while (fgets(line, sizeof(line), fp)) {
-        /* Remove newline if present */
-        line[strcspn(line, "\n")] = '\0';
+    cupidconf_entry **tail = &conf->entries;
+    char *line = NULL;
+    size_t capacity = 0;
+    ssize_t length;
+    for (;;) {
+        errno = 0;
+        length = getline(&line, &capacity, fp);
+        if (length < 0) {
+            if (ferror(fp) || !feof(fp)) goto fail;
+            break;
+        }
+        if (memchr(line, '\0', (size_t)length)) { errno = EINVAL; goto fail; }
 
         /* Trim whitespace */
         char *trimmed = trim_whitespace(line);
@@ -146,6 +142,7 @@ cupidconf_t *cupidconf_load(const char *filename) {
         *equal_sign = '\0';
         char *key = trim_whitespace(trimmed);
         char *value = trim_whitespace(equal_sign + 1);
+        if (!*key) continue;
 
         /* Handle inline comments (starting with # or ;) */
         char *comment_start = value;
@@ -160,26 +157,25 @@ cupidconf_t *cupidconf_load(const char *filename) {
 
         /* Expand ~ to home directory */
         char *expanded_value = expand_tilde(value);
-        if (!expanded_value) {
-            // On allocation failure, free everything and return NULL.
-            cupidconf_free(conf);
-            fclose(fp);
-            return NULL;
-        }
-
-        if (add_entry(conf, key, expanded_value) != 0) {
-            // On allocation failure, free everything and return NULL.
+        if (!expanded_value) goto fail;
+        if (add_entry(&tail, key, expanded_value) != 0) {
             free(expanded_value);
-            cupidconf_free(conf);
-            fclose(fp);
-            return NULL;
+            goto fail;
         }
 
         free(expanded_value);
     }
 
-    fclose(fp);
+    free(line);
+    if (fclose(fp) != 0) { cupidconf_free(conf); return NULL; }
     return conf;
+fail:
+    saved = errno;
+    free(line);
+    fclose(fp);
+    cupidconf_free(conf);
+    errno = saved;
+    return NULL;
 }
 
 const char *cupidconf_get(cupidconf_t *conf, const char *key) {
@@ -194,13 +190,16 @@ const char *cupidconf_get(cupidconf_t *conf, const char *key) {
 }
 
 char **cupidconf_get_list(cupidconf_t *conf, const char *key, int *count) {
+    if (count) *count = 0;
     if (!conf || !key || !count)
         return NULL;
 
     int cnt = 0;
     for (cupidconf_entry *entry = conf->entries; entry != NULL; entry = entry->next) {
-        if (match_wildcard(key, entry->key))
+        if (match_wildcard(key, entry->key)) {
+            if (cnt == INT_MAX || (size_t)cnt >= SIZE_MAX / sizeof(char *)) { errno = EOVERFLOW; return NULL; }
             cnt++;
+        }
     }
 
     if (cnt == 0) {
