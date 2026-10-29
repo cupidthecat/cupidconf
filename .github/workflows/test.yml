@@ -1,0 +1,11 @@
+name: Build and tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -j2 all test
+      - run: make -B test CFLAGS='-std=c11 -Wall -Wextra -g -fsanitize=address,undefined -fno-omit-frame-pointer'

@@ -1,11 +1,11 @@
 # cupidconf lib
 
-**Version:** 0.0.4  
+**Version:** 0.0.4
 
-**Overview:**  
+**Overview:**
 cupidconf is a lightweight configuration parser library written in C. It is designed to load simple configuration files formatted as key-value pairs (using the `key = value` syntax) and supports multiple entries for a single key. The library automatically trims whitespace and ignores comments (lines starting with `#` or `;`), making it easy for both beginners and advanced developers to integrate configuration parsing into their applications.
 
-**New in Version 0.0.4:**  
+**New in Version 0.0.4:**
 - **Home directory expansion (`~`)** support added. Both the filename path passed to `cupidconf_load()` and configuration values starting with `~` or `~/` are automatically expanded to the user's home directory path.
   - Filename expansion: You can use `~` in the filename path, e.g., `cupidconf_load("~/config.conf")` will expand to `/home/username/config.conf`.
   - Value expansion: Configuration values are also expanded, for example:
@@ -14,10 +14,10 @@ cupidconf is a lightweight configuration parser library written in C. It is desi
     cache_dir = ~/cache
     ```
     these will be automatically expanded to `/home/username/.config/myapp` and `/home/username/cache` (or the appropriate home directory path for your system).
-  - The expansion uses `wordexp()` for filenames and the `HOME` environment variable for values. If `HOME` is not set, values remain unchanged.
+  - Filename and value expansion both use `HOME`. Spaces, wildcards, environment references, and shell syntax in filenames are literal; filenames never execute shell commands. If `HOME` is not set, values remain unchanged.
 
-**New in Version 0.0.3:**  
-- **`cupidconf_value_in_list`** function added to allow **wildcard matching in config values**.  
+**New in Version 0.0.3:**
+- **`cupidconf_value_in_list`** function added to allow **wildcard matching in config values**.
   - For example, if your config has:
     ```
     ignore = *.txt
@@ -28,7 +28,7 @@ cupidconf is a lightweight configuration parser library written in C. It is desi
   - **`cupidconf_get` / `cupidconf_get_list`**: These interpret **wildcards in the key**. For instance, if your config has keys like `foo.* = ...`, you can retrieve matches by using `cupidconf_get(conf, "foo.bar")`.
   - **`cupidconf_value_in_list`**: This checks if a **given string** matches **wildcard patterns stored in the config values**. Useful for "ignore" or "exclusion" lists.
 
-**Intended Audience:**  
+**Intended Audience:**
 - C developers needing a simple yet effective configuration parser.
 - Developers looking to integrate configurable parameters into their C applications.
 - Anyone interested in learning how to implement a basic parser in C.
@@ -59,12 +59,12 @@ cupidconf is a lightweight configuration parser library written in C. It is desi
 
 ### Build Instructions
 1. **Download the source code** (typically, `cupidconf.h` and `cupidconf.c`).
-2. **Compile the library:**  
+2. **Compile the library:**
    Use the following command to compile the library along with your application:
    ```bash
    gcc -D_POSIX_C_SOURCE=200809L -o myapp myapp.c cupidconf.c
    ```
-3. **Include the header:**  
+3. **Include the header:**
    Ensure that your source files include the header:
    ```c
    #include "cupidconf.h"
@@ -324,9 +324,9 @@ int main(void) {
 ```
 
 **Explanation:**
-- The filename path passed to `cupidconf_load()` can contain `~`, which will be expanded using `wordexp()`.
+- The filename path passed to `cupidconf_load()` can contain `~`, which expands only `~` and `~/` using `HOME`.
 - Values starting with `~` or `~/` are automatically expanded to the user's home directory.
-- The expansion uses `wordexp()` for filenames and the `HOME` environment variable for values.
+- Filename and value expansion both use `HOME`. Spaces, wildcards, environment references, and shell syntax in filenames are literal; filenames never execute shell commands.
 - If `HOME` is not set, values remain unchanged (e.g., `~` stays as `~`).
 
 ---
@@ -339,13 +339,13 @@ int main(void) {
 cupidconf_t *cupidconf_load(const char *filename);
 ```
 
-- **Description:**  
-  Loads a configuration file specified by `filename`. The file must contain lines in the format `key = value`, and lines starting with `#` or `;` are treated as comments. Both the filename path and configuration values starting with `~` or `~/` are automatically expanded to the user's home directory path using `wordexp()` and the `HOME` environment variable.
-  
-- **Parameters:**  
+- **Description:**
+  Loads a configuration file specified by `filename`. The file must contain lines in the format `key = value`, and lines starting with `#` or `;` are treated as comments. Both the filename path and configuration values starting with `~` or `~/` are automatically expanded to the user's home directory path using the `HOME` environment variable.
+
+- **Parameters:**
   - `filename` (`const char *`): The path to the configuration file. The filename itself can contain `~` which will be expanded (e.g., `~/config.conf`).
-  
-- **Return Value:**  
+
+- **Return Value:**
   - Returns a pointer to a `cupidconf_t` object on success.
   - Returns `NULL` on failure (e.g., if the file cannot be opened or if memory allocation fails).
 
@@ -357,14 +357,14 @@ cupidconf_t *cupidconf_load(const char *filename);
 const char *cupidconf_get(cupidconf_t *conf, const char *key);
 ```
 
-- **Description:**  
+- **Description:**
   Retrieves the value associated with the given key from the configuration object. If the key appears more than once, the first occurrence is returned.
-  
-- **Parameters:**  
+
+- **Parameters:**
   - `conf` (`cupidconf_t *`): The configuration object returned by `cupidconf_load`.
   - `key` (`const char *`): The key for which the value is requested.
-  
-- **Return Value:**  
+
+- **Return Value:**
   - Returns a read-only string containing the value if found.
   - Returns `NULL` if the key is not present or if either argument is `NULL`.
 
@@ -376,19 +376,19 @@ const char *cupidconf_get(cupidconf_t *conf, const char *key);
 char **cupidconf_get_list(cupidconf_t *conf, const char *key, int *count);
 ```
 
-- **Description:**  
+- **Description:**
   Retrieves all values associated with a given key from the configuration object. Keys may contain wildcard patterns (e.g., `"ignore.*"`), and this function will return all entries whose keys match that pattern.
-  
-- **Parameters:**  
+
+- **Parameters:**
   - `conf` (`cupidconf_t *`): The configuration object.
   - `key` (`const char *`): The key to search for (supports wildcards).
   - `count` (`int *`): A pointer to an integer that will be set to the number of values found.
-  
-- **Return Value:**  
+
+- **Return Value:**
   - Returns an array of pointers (read-only) to the values associated with the key.
   - Returns `NULL` if the key is not found or if memory allocation for the array fails.
-  
-- **Memory Management:**  
+
+- **Memory Management:**
   The caller is responsible for freeing the returned array (using `free()`), but **should not free** the individual strings as they are managed by the configuration object.
 
 ---
@@ -399,21 +399,21 @@ char **cupidconf_get_list(cupidconf_t *conf, const char *key, int *count);
 bool cupidconf_value_in_list(cupidconf_t *conf, const char *key, const char *value);
 ```
 
-- **Description:**  
-  Checks if a given string (`value`) matches **any** of the wildcard patterns stored as **values** under the specified `key`. This is useful for implementing “ignore” or “exclusion” lists in your configuration.  
+- **Description:**
+  Checks if a given string (`value`) matches **any** of the wildcard patterns stored as **values** under the specified `key`. This is useful for implementing “ignore” or “exclusion” lists in your configuration.
   - For example, if your config has:
     ```
     ignore = *.txt
     ignore = build_*
     ```
     then `cupidconf_value_in_list(conf, "ignore", "among.txt")` returns `true`.
-  
-- **Parameters:**  
+
+- **Parameters:**
   - `conf` (`cupidconf_t *`): The configuration object.
   - `key` (`const char *`): The key whose values represent wildcard patterns.
   - `value` (`const char *`): The string to test against these wildcard patterns.
-  
-- **Return Value:**  
+
+- **Return Value:**
   - `true` if `value` matches at least one pattern under `key`.
   - `false` if it does not match or if any parameter is `NULL`.
 
@@ -425,13 +425,13 @@ bool cupidconf_value_in_list(cupidconf_t *conf, const char *key, const char *val
 void cupidconf_free(cupidconf_t *conf);
 ```
 
-- **Description:**  
+- **Description:**
   Frees the configuration object along with all associated memory (including key/value entries).
-  
-- **Parameters:**  
+
+- **Parameters:**
   - `conf` (`cupidconf_t *`): The configuration object to be freed.
-  
-- **Return Value:**  
+
+- **Return Value:**
   - This function does not return a value.
 
 ---
@@ -440,23 +440,23 @@ void cupidconf_free(cupidconf_t *conf);
 
 While CupidConf itself does not expose runtime configuration options via environment variables or configuration settings, it expects configuration files to follow a simple format:
 
-- **File Format:**  
-  - Each configuration line should be in the form:  
+- **File Format:**
+  - Each configuration line should be in the form:
     ```
     key = value
     ```
   - Leading and trailing whitespace around both the key and value is automatically trimmed.
   - Empty lines and lines beginning with `#` or `;` are ignored, allowing you to include comments.
 
-- **Home Directory Expansion:**  
+- **Home Directory Expansion:**
   - Both filename paths and values starting with `~` or `~/` are automatically expanded to the user's home directory path.
-  - Filename expansion uses `wordexp()` (e.g., `cupidconf_load("~/config.conf")`).
+  - Filename expansion uses `HOME` (e.g., `cupidconf_load("~/config.conf")`); other characters are literal.
   - Value expansion uses the `HOME` environment variable. If `HOME` is not set, the value remains unchanged.
   - Examples: `~/.config` expands to `/home/username/.config`, `~/cache` expands to `/home/username/cache`.
 
-- **Wildcard Support:**  
-  - **Key-based Wildcards:** `cupidconf_get` and `cupidconf_get_list` interpret wildcards in the **config key**.  
-  - **Value-based Wildcards:** `cupidconf_value_in_list` interprets wildcards in the **config value**.  
+- **Wildcard Support:**
+  - **Key-based Wildcards:** `cupidconf_get` and `cupidconf_get_list` interpret wildcards in the **config key**.
+  - **Value-based Wildcards:** `cupidconf_value_in_list` interprets wildcards in the **config value**.
 
 ---
 
@@ -464,13 +464,13 @@ While CupidConf itself does not expose runtime configuration options via environ
 
 ### Extending cupidconf
 
-- **Support for Sections:**  
+- **Support for Sections:**
   If you need configuration sections (e.g., `[section]`), consider enhancing the parser to recognize section headers and group key/value pairs accordingly.
 
-- **Custom Parsing Logic:**  
+- **Custom Parsing Logic:**
   For applications with more complex configuration formats (such as nested configurations or value type conversions), you can extend the parser functions or write additional helper functions that post-process the raw string values.
 
-- **Wildcard Matching:**  
+- **Wildcard Matching:**
   - By default, the library uses `fnmatch` for wildcard matching.
   - You can disable or replace this with your own pattern-matching logic if desired.
 
@@ -478,13 +478,15 @@ While CupidConf itself does not expose runtime configuration options via environ
 
 ## FAQ / Troubleshooting
 
-**Q:** *My application crashes after loading a configuration file. What could be the issue?*  
+**Q:** *My application crashes after loading a configuration file. What could be the issue?*
 **A:** Ensure that the configuration file is correctly formatted. Lines without an `=` separator are skipped, but malformed lines may indicate issues with file encoding or unexpected characters. Also, verify that you are checking for `NULL` returns from API functions.
 
-**Q:** *Why do I need to define `_POSIX_C_SOURCE`?*  
+**Q:** *Why do I need to define `_POSIX_C_SOURCE`?*
 **A:** The library uses POSIX functions (e.g., `fgets`, `strdup`, `fnmatch`, etc.) that require `_POSIX_C_SOURCE` to be defined for proper feature support on some systems.
 
-**Q:** *How do I free the memory allocated by `cupidconf_get_list`?*  
+**Q:** *How do I free the memory allocated by `cupidconf_get_list`?*
 **A:** You only need to free the array pointer returned by `cupidconf_get_list`. Do **not** free the individual strings, as they are managed by the configuration object.
 
 ---
+
+Run `make test` to check literal filenames, home expansion, long lines, duplicate ordering, wildcard queries, and read failures.
