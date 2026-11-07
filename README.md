@@ -64,3 +64,10 @@ int main(int argc, char **argv) {
 cc -std=c11 -D_POSIX_C_SOURCE=200809L -I. example.c cupidconf.c -o example
 ./example config.conf
 ```
+
+## Literal values
+
+Single-quoted values preserve spaces, backslashes, comment characters, and a leading tilde.
+Write two single quotes inside a literal to include one quote. Comments may follow the closing
+quote. Unclosed quotes and trailing non-comment text are rejected. Unquoted values keep their
+existing comment and home-directory expansion behavior.
