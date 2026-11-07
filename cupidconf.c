@@ -229,8 +229,9 @@ const char *cupidconf_get(cupidconf_t *conf, const char *key) {
     if (!conf || !key)
         return NULL;
 
+    bool literal = strpbrk(key, "*?[\\\\") == NULL;
     for (cupidconf_entry *entry = conf->entries; entry != NULL; entry = entry->next) {
-        if (match_wildcard(key, entry->key))
+        if ((literal ? strcmp(key, entry->key) == 0 : match_wildcard(key, entry->key)))
             return entry->value;
     }
     return NULL;
@@ -243,8 +244,9 @@ char **cupidconf_get_list(cupidconf_t *conf, const char *key, int *count) {
         return NULL;
 
     int cnt = 0;
+    bool literal = strpbrk(key, "*?[\\\\") == NULL;
     for (cupidconf_entry *entry = conf->entries; entry != NULL; entry = entry->next) {
-        if (match_wildcard(key, entry->key)) {
+        if ((literal ? strcmp(key, entry->key) == 0 : match_wildcard(key, entry->key))) {
             if (cnt == INT_MAX || (size_t)cnt >= SIZE_MAX / sizeof(char *)) {
                 errno = EOVERFLOW;
                 return NULL;
@@ -266,7 +268,7 @@ char **cupidconf_get_list(cupidconf_t *conf, const char *key, int *count) {
 
     int idx = 0;
     for (cupidconf_entry *entry = conf->entries; entry != NULL; entry = entry->next) {
-        if (match_wildcard(key, entry->key))
+        if ((literal ? strcmp(key, entry->key) == 0 : match_wildcard(key, entry->key)))
             values[idx++] = entry->value;
     }
 

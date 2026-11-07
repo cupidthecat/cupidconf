@@ -35,6 +35,13 @@ int main(void) {
     assert(count == 2 && list);
     assert(!strcmp(list[0], "first") && !strcmp(list[1], "second"));
     free(list);
+    list = cupidconf_get_list(conf, "path", &count);
+    assert(list && count == 2 && !strcmp(list[0], "first") && !strcmp(list[1], "second"));
+    free(list);
+    assert(!strcmp(cupidconf_get(conf, "p?th"), "first"));
+    assert(!strcmp(cupidconf_get(conf, "p[a]th"), "first"));
+    assert(!strcmp(cupidconf_get(conf, "pa\\th"), "first"));
+    assert(!cupidconf_get(conf, "PATH"));
     assert(cupidconf_value_in_list(conf, "ignore", "x.txt"));
     assert(cupidconf_value_in_list(conf, "ignore", "build_test"));
     assert(!cupidconf_value_in_list(conf, "ignore", "x.c"));

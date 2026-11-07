@@ -1,4 +1,4 @@
-CC = cc
+CC = clang
 CFLAGS ?= -O2 -Wall -Wextra -std=c11
 AR ?= ar
 all: libcupidconf.a
